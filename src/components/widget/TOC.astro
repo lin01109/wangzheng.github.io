@@ -1,0 +1,23 @@
+---
+import type {MarkdownHeading} from 'astro';
+interface Props {class?:string;headings:MarkdownHeading[]}
+const headings=Astro.props.headings.filter(h=>h.depth===2||h.depth===3);
+---
+<table-of-contents aria-label="文章大纲">{headings.map(h=><a href={'#'+h.slug} class:list={[{'subheading':h.depth===3}]}>{h.text.replace(/#$/, "").trim()}</a>)}</table-of-contents>
+<script>
+class TableOfContents extends HTMLElement {
+ private cleanup?:()=>void;
+ connectedCallback(){requestAnimationFrame(()=>this.init())}
+ init(){if(!this.isConnected)return;this.cleanup?.();const links=Array.from(this.querySelectorAll<HTMLAnchorElement>('a'));const headings=links.map(a=>document.getElementById(decodeURIComponent(a.hash.slice(1))));
+ const update=()=>{let index=0;headings.forEach((h,i)=>{if(h&&h.getBoundingClientRect().top<=140)index=i});links.forEach((a,i)=>{if(i===index)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current')})};
+ const details=this.closest('details');const media=matchMedia('(min-width:1024px)');
+ const sync=()=>{if(details)details.open=media.matches;update()};sync();
+ const click=(event:Event)=>{const target=event.target;if(!(target instanceof Element))return;const link=target.closest<HTMLAnchorElement>('a');if(!link)return;const heading=document.getElementById(decodeURIComponent(link.hash.slice(1)));if(!heading)return;
+ if(!media.matches&&details){event.preventDefault();event.stopPropagation();details.open=false;history.pushState(null,'',link.hash);requestAnimationFrame(()=>{heading.scrollIntoView({behavior:'instant',block:'start'});update()})}};
+ this.addEventListener('click',click);media.addEventListener('change',sync);
+ window.addEventListener('scroll',update,{passive:true});window.addEventListener('resize',update);update();this.cleanup=()=>{this.removeEventListener('click',click);media.removeEventListener('change',sync);window.removeEventListener('scroll',update);window.removeEventListener('resize',update)};
+ }
+ disconnectedCallback(){this.cleanup?.()}
+}
+if(!customElements.get('table-of-contents'))customElements.define('table-of-contents',TableOfContents);
+</script>

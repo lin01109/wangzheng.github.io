@@ -1,0 +1,14 @@
+---
+import type { MarkdownHeading } from 'astro';
+import Profile from './Profile.astro';
+import { url } from '../../utils/url-utils';
+interface Props { class?: string; headings?: MarkdownHeading[] }
+---
+<aside id="sidebar" class:list={[Astro.props.class, 'w-full']} aria-label="博客简介">
+ <Profile />
+ <div id="sidebar-sticky" class="card-base mt-4 p-6 text-sm leading-7">
+ <p class="text-[var(--primary)] font-bold mb-2">慢慢积累，也是一种前进</p>
+ <p class="text-75">从一个问题出发，把概念、例子与思考整理成文章。</p>
+ <a class="link inline-block mt-3 text-[var(--primary)]" href={url('/about/')}>关于这个小站 ↗</a>
+ </div>
+</aside>

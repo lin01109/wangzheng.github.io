@@ -1,0 +1,30 @@
+---
+import MainGridLayout from '../layouts/MainGridLayout.astro';
+import { getSortedPosts } from '../utils/content-utils';
+import { getTagUrl, getPostUrlBySlug } from '../utils/url-utils';
+export function getStaticPaths() { return [{ params: { page: undefined } }]; }
+const posts = await getSortedPosts();
+const counts = new Map<string, number>();
+const years = new Map<number, typeof posts>();
+for (const post of posts) {
+  for (const tag of post.data.tags) counts.set(tag, (counts.get(tag) || 0) + 1);
+  const year = post.data.published.getUTCFullYear();
+  if (!years.has(year)) years.set(year, []);
+  years.get(year)!.push(post);
+}
+const tags = [...counts].sort(([a], [b]) => a.localeCompare(b, 'zh-CN'));
+---
+<MainGridLayout title="文章">
+  {tags.length > 0 && <section class="archive-tags" aria-labelledby="tags-heading">
+    <h1 id="tags-heading" class="index-heading">标签</h1>
+    <ul>{tags.map(([tag, count]) => <li><a href={getTagUrl(tag)}>{tag}</a><span class="tag-count">（{count}）</span></li>)}</ul>
+  </section>}
+  {[...years].map(([year, entries]) => <section class="archive-year" aria-label={`${year} 年文章`}>
+    <h2 class="index-heading">{year}</h2>
+    <ul>{entries.map(post => <li>
+      <time datetime={post.data.published.toISOString().slice(0, 10)}>{post.data.published.toISOString().slice(5, 10).replace('-', '/')}</time>
+      <a href={getPostUrlBySlug(post.slug)}>{post.data.title}</a>
+    </li>)}</ul>
+  </section>)}
+  {posts.length === 0 && <p>暂无文章。</p>}
+</MainGridLayout>

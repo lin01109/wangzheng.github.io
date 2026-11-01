@@ -1,0 +1,11 @@
+---
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import TOC from '../components/widget/TOC.astro';
+import Layout from './Layout.astro';
+import type {MarkdownHeading} from 'astro';
+interface Props {title?:string;banner?:string;description?:string;lang?:string;setOGTypeArticle?:boolean;headings?:MarkdownHeading[]}
+const {headings=[],...props}=Astro.props;
+const outline=headings.filter(h=>h.depth===2||h.depth===3);
+---
+<Layout {...props}><slot slot="head" name="head"/><div id="navbar-wrapper"><Navbar/></div><main id="swup-container" class:list={['white-layout',{'has-outline':outline.length>0}]}><div id="toc">{outline.length>0&&<aside class="outline"><details open><summary>文章大纲</summary><TOC headings={outline}/></details></aside>}</div><div id="content-wrapper"><slot/><Footer/></div></main></Layout>

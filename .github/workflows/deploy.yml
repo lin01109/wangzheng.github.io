@@ -1,0 +1,38 @@
+name: Deploy blog
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+env:
+  SITE_URL: https://lin01109.github.io
+  BASE_PATH: /wangzheng.github.io/
+  ASTRO_TELEMETRY_DISABLED: '1'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: withastro/action@v6
+        with:
+          node-version: '24'
+          build-cmd: pnpm install --frozen-lockfile && pnpm check && pnpm test:drafts && pnpm build
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

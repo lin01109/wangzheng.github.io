@@ -1,0 +1,7 @@
+---
+import MainGridLayout from '@layouts/MainGridLayout.astro';
+import {getSortedPosts} from '../utils/content-utils';
+import Finder from '../components/Finder.astro';
+const posts=await getSortedPosts();
+---
+<MainGridLayout title="查找文章"><h1 class="section-heading">查找文章</h1><Finder posts={posts}/></MainGridLayout>

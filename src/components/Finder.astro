@@ -1,0 +1,30 @@
+---
+import { getPostUrlBySlug } from '../utils/url-utils';
+import type {CollectionEntry} from 'astro:content';
+interface Props {posts: CollectionEntry<'posts'>[]}
+const {posts}=Astro.props;
+const tags=[...new Set(posts.flatMap(p=>p.data.tags))].sort();
+const rows=posts.map(p=>({title:p.data.title,date:p.data.published.toISOString().slice(0,10),tags:p.data.tags,url:getPostUrlBySlug(p.slug)}));
+---
+<section class="card-base finder" data-rows={JSON.stringify(rows)}>
+<form id="find-form"><label for="find-query">关键词</label><input id="find-query" name="q" type="search" placeholder="搜索文章内容"/><label for="find-tag">标签</label><select id="find-tag" name="tag"><option value="">全部标签</option>{tags.map(t=><option value={t}>{t}</option>)}</select><button type="submit">搜索</button><button id="find-reset" type="button">清除筛选 / 查看全部</button></form>
+<p id="find-state" role="status" aria-live="polite"></p><div id="find-results"></div>
+</section>
+<script>
+import {url} from '../utils/url-utils';
+function initFinder(){
+ const host=document.querySelector<HTMLElement>('.finder'); if(!host||host.dataset.ready)return;host.dataset.ready='true';
+ const rows: {title:string;date:string;tags:string[];url:string}[]=JSON.parse(host.dataset.rows||'[]');
+ const form=host.querySelector<HTMLFormElement>('form')!; const query=host.querySelector<HTMLInputElement>('#find-query')!; const tag=host.querySelector<HTMLSelectElement>('#find-tag')!; const state=host.querySelector<HTMLElement>('#find-state')!;const results=host.querySelector<HTMLElement>('#find-results')!;
+ const params=new URLSearchParams(location.search);query.value=params.get('q')||'';tag.value=params.get('tag')||'';
+ let request=0;
+ async function run(push=false){const id=++request; const q=query.value.trim(),t=tag.value;const params=new URLSearchParams();if(q)params.set('q',q);if(t)params.set('tag',t);const next=location.pathname+(params.size?'?'+params:'');if(push&&next!==location.pathname+location.search)history.pushState(null,'',next);state.textContent='正在查找…';
+ let matching=rows;
+ try{if(q){const pf=await import(/* @vite-ignore */ url('/pagefind/pagefind.js'));await pf.options({baseUrl:url('/')});const response=await pf.search(q);const hits=await Promise.all(response.results.map((r:{data:()=>Promise<{url:string}>})=>r.data()));const paths=new Set(hits.map((h:{url:string})=>new URL(h.url,location.origin).pathname));matching=matching.filter(r=>paths.has(new URL(r.url,location.origin).pathname));}if(t)matching=matching.filter(r=>r.tags.includes(t));if(id!==request)return;results.replaceChildren();for(const row of matching){const card=document.createElement('article');card.className='find-result';const a=document.createElement('a');a.href=row.url;a.textContent=row.title;const time=document.createElement('time');time.dateTime=row.date;time.textContent=row.date;card.append(time,a);results.append(card);}state.textContent=(q?'关键词「'+q+'」 · ':'')+(t?'标签「'+t+'」 · ':'')+matching.length+' 篇文章'+(!matching.length?'，没有匹配结果，请清除筛选。':'');}catch{if(id===request){results.replaceChildren();state.textContent='搜索暂不可用，请运行构建预览，或清除关键词按标签浏览。';}}
+ }
+ form.addEventListener('submit',e=>{e.preventDefault();void run(true)});tag.addEventListener('change',()=>void run(true));host.querySelector('#find-reset')!.addEventListener('click',()=>{query.value='';tag.value='';void run(true)});window.addEventListener('popstate',()=>{if(!host.isConnected)return;const params=new URLSearchParams(location.search);query.value=params.get('q')||'';tag.value=params.get('tag')||'';void run()});void run();
+}
+initFinder();document.addEventListener('swup:page:view',initFinder);document.addEventListener('astro:page-load',initFinder);
+// Swup retains the navbar while replacing main content.
+new MutationObserver(initFinder).observe(document.body,{childList:true,subtree:true});
+</script>
